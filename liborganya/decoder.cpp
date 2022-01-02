@@ -545,11 +545,14 @@ org_decoder_t * org_decoder_create(const char* org_file, uint32_t loop_count)
   if ( !decoder )
     return nullptr;
 
+
   try
   {
     // Parse the org file
     decoder->file = _org_file_create(org_file);
-
+    if ( !decoder->file )
+      return nullptr;
+      
     // Set initial state
     decoder->state.primed         = 0;
     decoder->state.current_beat   = 0;
