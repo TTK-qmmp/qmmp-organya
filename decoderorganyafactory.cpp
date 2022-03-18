@@ -1,6 +1,6 @@
+#include "decoderorganyafactory.h"
 #include "organyahelper.h"
 #include "decoder_organya.h"
-#include "decoderorganyafactory.h"
 
 #include <QMessageBox>
 
@@ -12,11 +12,10 @@ bool DecoderOrganyaFactory::canDecode(QIODevice *) const
 DecoderProperties DecoderOrganyaFactory::properties() const
 {
     DecoderProperties properties;
-    properties.name = "Organya Plugin";
+    properties.name = tr("Organya Plugin");
     properties.shortName = "organya";
     properties.filters << "*.org";
     properties.description = "Cave Story's org Audio File";
-    properties.protocols << "file";
     properties.noInput = true;
     return properties;
 }
@@ -30,7 +29,6 @@ Decoder *DecoderOrganyaFactory::create(const QString &path, QIODevice *input)
 QList<TrackInfo*> DecoderOrganyaFactory::createPlayList(const QString &path, TrackInfo::Parts parts, QStringList *)
 {
     TrackInfo *info = new TrackInfo(path);
-
     if(parts == TrackInfo::Parts())
     {
         return QList<TrackInfo*>() << info;
@@ -48,11 +46,10 @@ QList<TrackInfo*> DecoderOrganyaFactory::createPlayList(const QString &path, Tra
         info->setValue(Qmmp::BITRATE, helper.bitrate());
         info->setValue(Qmmp::SAMPLERATE, helper.sampleRate());
         info->setValue(Qmmp::CHANNELS, helper.channels());
-        info->setValue(Qmmp::BITS_PER_SAMPLE, helper.bitsPerSample());
+        info->setValue(Qmmp::BITS_PER_SAMPLE, helper.depth());
         info->setValue(Qmmp::FORMAT_NAME, "Organya");
         info->setDuration(helper.totalTime());
     }
-
     return QList<TrackInfo*>() << info;
 }
 
