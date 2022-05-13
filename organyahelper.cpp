@@ -1,5 +1,193 @@
 #include "organyahelper.h"
 
+#include <liborganya/organya/organya.h>
+#include <liborganya/pxtone/pxtnService.h>
+
+#define INPUT_BUFFER_SIZE   1024
+
+class OrgFileReader : public FileReader
+{
+public:
+    OrgFileReader();
+    virtual ~OrgFileReader();
+
+    virtual bool load(const QString &path) override final;
+    virtual void seek(qint64 time) override final;
+    virtual qint64 totalTime() const override final;
+    virtual qint64 read(unsigned char *data, qint64 maxSize) override final;
+
+private:
+    org_decoder_t *m_input = nullptr;
+
+};
+
+OrgFileReader::OrgFileReader()
+{
+
+}
+
+OrgFileReader::~OrgFileReader()
+{
+    if(m_input)
+    {
+        org_decoder_destroy(m_input);
+    }
+}
+
+bool OrgFileReader::load(const QString &path)
+{
+    m_input = org_decoder_create(qPrintable(path), 1);
+    if(!m_input)
+    {
+        qWarning("OrgFileReader: org_decoder_create error");
+        return false;
+    }
+    return true;
+}
+
+void OrgFileReader::seek(qint64 time)
+{
+    org_decoder_seek_sample(m_input, time * sampleRate() / 1000);
+}
+
+qint64 OrgFileReader::totalTime() const
+{
+    return org_decoder_get_total_samples(m_input) / sampleRate() * 1000;
+}
+
+qint64 OrgFileReader::read(unsigned char *data, qint64 maxSize)
+{
+    const unsigned int sample = maxSize / channels() / sizeof(int16_t);
+    return org_decode_samples(m_input, (int16_t*)data, sample) * channels() * sizeof(int16_t);
+}
+
+
+class PxFileReader : public FileReader
+{
+public:
+    PxFileReader();
+    virtual ~PxFileReader();
+
+    virtual bool load(const QString &path) override final;
+    virtual void seek(qint64 time) override final;
+    virtual qint64 totalTime() const override final;
+    virtual qint64 read(unsigned char *data, qint64 maxSize) override final;
+
+private:
+    pxtnService *m_pxs = nullptr;
+    pxtnDescriptor *m_pxd = nullptr;
+
+};
+
+PxFileReader::PxFileReader()
+{
+
+}
+
+PxFileReader::~PxFileReader()
+{
+    if(m_pxs)
+    {
+        m_pxs->clear();
+        delete m_pxs;
+        delete m_pxd;
+    }
+}
+
+bool PxFileReader::load(const QString &path)
+{
+    QFile file(path);
+    if(!file.open(QFile::ReadOnly))
+    {
+        qWarning("PxFileReader: open file failed");
+        return false;
+    }
+
+    m_pxs = new pxtnService;
+    m_pxd = new pxtnDescriptor;
+
+    if(m_pxs->init() != pxtnOK)
+    {
+        qWarning("PxFileReader: pxtnService init error");
+        return false;
+    }
+
+    if(!m_pxs->set_destination_quality(2, sampleRate()))
+    {
+        qWarning("PxFileReader: set_destination_quality error");
+        return false;
+    }
+
+    const qint64 size = file.size();
+    const QByteArray &module = file.readAll();
+    file.close();
+
+    if(!m_pxd->set_memory_r((void*)module.constData(), size))
+    {
+        qWarning("PxFileReader: set_memory_r error");
+        return false;
+    }
+
+    if(m_pxs->read(m_pxd) != pxtnOK)
+    {
+        qWarning("PxFileReader: pxtnService read error");
+        return false;
+    }
+
+    if(m_pxs->tones_ready() != pxtnOK)
+    {
+        qWarning("PxFileReader: pxtnService tones_ready error");
+        m_pxs->evels->Release();
+        return false;
+    }
+
+    pxtnVOMITPREPARATION prep = {0};
+//        prep.flags |= pxtnVOMITPREPFLAG_loop; // don't loop
+    prep.start_pos_float = 0;
+    prep.master_volume = 1.0f; //(volume / 100.0f);
+
+    if(!m_pxs->moo_preparation(&prep))
+    {
+        qWarning("PxFileReader: moo_preparation error");
+        return false;
+    }
+    return true;
+}
+
+void PxFileReader::seek(qint64 time)
+{
+    pxtnVOMITPREPARATION prep = {0};
+    prep.start_pos_sample = sampleRate() * time / 1000;
+    prep.master_volume = 1.0f; //(volume / 100.0f);
+    m_pxs->moo_preparation(&prep);
+}
+
+qint64 PxFileReader::totalTime() const
+{
+    return m_pxs->moo_get_total_sample() / sampleRate() * 1000;
+}
+
+qint64 PxFileReader::read(unsigned char *data, qint64)
+{
+    if(m_pxs->moo_is_end_vomit() || !m_pxs->moo_is_valid_data())
+    {
+        return 0;
+    }
+
+    const unsigned int sample = pxtnBITPERSAMPLE / 8 * channels() * INPUT_BUFFER_SIZE;
+    return m_pxs->Moo((void*)data, sample) ? sample : 0;
+}
+
+
+static FileReader *generateFileReader(const QString &path)
+{
+    const QString &suffix = path.toLower();
+    if(suffix.endsWith(".org")) return new OrgFileReader;
+    else if(suffix.endsWith(".pttune") || suffix.endsWith(".ptcop")) return new PxFileReader;
+    else return nullptr;
+}
+
+
 OrganyaHelper::OrganyaHelper(const QString &path)
     : m_path(path)
 {
@@ -13,41 +201,24 @@ OrganyaHelper::~OrganyaHelper()
 
 void OrganyaHelper::deinit()
 {
-    if(m_input)
-    {
-        org_decoder_destroy(m_input);
-    }
+    delete m_input;
 }
 
 bool OrganyaHelper::initialize()
 {
-    QFile file(m_path);
-    if(!file.open(QFile::ReadOnly))
-    {
-        qWarning("OrganyaHelper: open file failed");
-        file.close();
-        return false;
-    }
-
-    const qint64 size = file.size();
-    file.close();
-
-    m_input = org_decoder_create(qPrintable(m_path), 1);
+    m_input = generateFileReader(m_path);
     if(!m_input)
     {
-        qWarning("OrganyaHelper: org_decoder_create error");
+        qWarning("OrganyaHelper: load file suffix error");
         return false;
     }
 
-    m_input->state.sample_rate = sampleRate();
-    m_bitrate = size * 8.0 / totalTime() + 1.0f;
+    if(!m_input->load(m_path))
+    {
+       qWarning("OrganyaHelper: unable to open file");
+       return false;
+    }
 
     seek(0);
     return true;
-}
-
-qint64 OrganyaHelper::read(unsigned char *data, qint64 maxSize)
-{
-    const unsigned int sample = maxSize / 2 / sizeof(int16_t);
-    return org_decode_samples(m_input, (int16_t*)data, sample) * 2 * sizeof(int16_t);
 }

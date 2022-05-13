@@ -4,9 +4,16 @@
 
 #include <QMessageBox>
 
-bool DecoderOrganyaFactory::canDecode(QIODevice *) const
+bool DecoderOrganyaFactory::canDecode(QIODevice *input) const
 {
-    return false;
+    QFile *file = static_cast<QFile*>(input);
+    if(!file)
+    {
+        return false;
+    }
+
+    OrganyaHelper helper(file->fileName());
+    return helper.initialize();
 }
 
 DecoderProperties DecoderOrganyaFactory::properties() const
@@ -14,8 +21,9 @@ DecoderProperties DecoderOrganyaFactory::properties() const
     DecoderProperties properties;
     properties.name = tr("Organya Plugin");
     properties.shortName = "organya";
-    properties.filters << "*.org";
+    properties.filters << "*.org" << "*.pttune" << "*.ptcop";
     properties.description = "Cave Story's org Audio File";
+    properties.protocols << "file";
     properties.noInput = true;
     return properties;
 }
