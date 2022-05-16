@@ -1,5 +1,5 @@
 This is a plugin for Qmmp (1.4.0 or greater) which supports ORG file.
-(Cave Story's org and pxtone)
+(Cave Story's org and PXTone Audio File)
 
 The following packages are required, including development headers,
 which some vendors split into separate packages:
