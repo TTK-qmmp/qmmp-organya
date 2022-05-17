@@ -25,6 +25,7 @@ DecoderProperties DecoderOrganyaFactory::properties() const
     properties.description = "Cave Story's org Audio File";
     properties.protocols << "file";
     properties.noInput = true;
+    properties.hasAbout = true;
     return properties;
 }
 
