@@ -75,9 +75,9 @@ void DecoderOrganyaFactory::showSettings(QWidget *parent)
 
 void DecoderOrganyaFactory::showAbout(QWidget *parent)
 {
-    QMessageBox::about (parent, tr("About ORG Reader Plugin"),
-                        tr("Qmmp ORG Reader Plugin")+"\n"+
-                        tr("Written by: Greedysky <greedysky@163.com>"));
+    QMessageBox::about(parent, tr("About ORG Reader Plugin"),
+                       tr("Qmmp ORG Reader Plugin") + "\n" +
+                       tr("Written by: Greedysky <greedysky@163.com>"));
 }
 
 QString DecoderOrganyaFactory::translation() const
