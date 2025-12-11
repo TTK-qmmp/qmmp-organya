@@ -38,8 +38,6 @@ SOURCES += decoderorganyafactory.cpp \
            liborganya/pxtone/pxtnWoicePTV.cpp \
            liborganya/pxtone/pxtoneNoise.cpp
 
-INCLUDEPATH += $$PWD/liborganya
-
 #CONFIG += BUILD_PLUGIN_INSIDE
 contains(CONFIG, BUILD_PLUGIN_INSIDE){
     include($$PWD/../../plugins.pri)
