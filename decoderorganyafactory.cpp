@@ -86,7 +86,9 @@ void DecoderOrganyaFactory::showAbout(QWidget *parent)
 {
     QMessageBox::about(parent, tr("About ORG Reader Plugin"),
                        tr("Qmmp ORG Reader Plugin") + "\n" +
-                       tr("Written by: Greedysky <greedysky@163.com>"));
+                       tr("Written by: Greedysky <greedysky@163.com>") + "\n" +
+                       tr("Based on the source code from the Organya") + "\n" +
+                       tr("Based on the source code from the PXTone"));
 }
 
 QString DecoderOrganyaFactory::translation() const
