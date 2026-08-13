@@ -1,4 +1,4 @@
-This is a plugin for Qmmp (1.6.0 or greater) which supports ORG file.
+This is an inut plugin for Qmmp (1.6.0 or later) that supports ORG files.
 
 Based on [Organya](https://github.com/xbmc/audiodecoder.organya) (Cave Story's org module),
 [PXTone](https://bitbucket.org/wothke/webpixel) (PXTone audio module).
